@@ -41,29 +41,50 @@ def main():
 
 	# Creates a main title and subheader on your page -
 	# these are static across all pages
-	st.title("Tweet Classifer")
+	st.title("EDSA Team TS4 Climate change Tweet Classifier")
 	st.subheader("Climate change tweet classification")
 
 	# Creating sidebar with selection box -
 	# you can create multiple pages this way
-	options = ["Prediction", "Information"]
-	selection = st.sidebar.selectbox("Choose Option", options)
+	options = ["Introduction", "Data Collection","Data Transformation Process", "Prediction"]
+	selection = st.sidebar.selectbox("Navigate", options)
 
-	# Building out the "Information" page
-	if selection == "Information":
-		st.info("General Information")
+	# Building out the "Introduction" page
+	if selection == "Introduction":
+		st.info("Background")
 		# You can read a markdown file from supporting resources folder
-		st.markdown("Some information here")
+		st.markdown("Many companies are built around lessening one’s environmental impact or carbon footprint. "
+					"They offer products and services that are environmentally friendly and sustainable, "
+					"in line with their values and ideals. They would like to determine how people perceive climate change and whether or not they believe it is a real threat. "
+					"This would add to their market research efforts in gauging how their product/service may be received."
+					"With this context, We will present to you, a Machine Learning model "
+					"that is able to classify whether or not a person believes in climate change, based on their novel tweet data."
+					"Providing an accurate and robust solution to this task would give your company access to a broad base of consumer sentiment, "
+					"spanning multiple demographic and geographic categories - thus increasing your insights and future marketing strategies.")
 
-		st.subheader("Raw Twitter data and label")
-		if st.checkbox('Show raw data'): # data is hidden if box is unchecked
-			st.write(raw[['sentiment', 'message']]) # will write the df to the page
+		st.subheader("Some links on climate change")
+		st.markdown('What is climate change : link')
+
+	# Building out the "Introduction" page
+	if selection == "Data Collection":
+		st.info("Where does our data come from?")
+		# You can read a markdown file from supporting resources folder
+		st.markdown("The collection of this data was funded by a Canada Foundation for Innovation JELF Grant to Chris Bauch, "
+						"University of Waterloo. The dataset aggregates tweets pertaining to climate change collected between "
+						"Apr 27, 2015 and Feb 21, 2018. In total, 43943 tweets were collected. Each tweet is labelled as one of the following classes:")
+		st.markdown("1: The tweet supports the belief of man-made climate change")
+		st.markdown("-1: The tweet does not believe in man-made climate change")
+		st.markdown("0: The tweet neither supports nor refutes the belief of man-made climate change")
+		st.markdown("2: The tweet links to factual news about climate change")
+
+
+
 
 	# Building out the predication page
 	if selection == "Prediction":
-		st.info("Prediction with ML Models")
+		st.info("Prediction with Logistic Regression Model")
 		# Creating a text box for user input
-		tweet_text = st.text_area("Enter Text","Type Here")
+		tweet_text = st.text_area("Enter The tweet here","Type Here")
 
 		if st.button("Classify"):
 			# Transforming user input with vectorizer
@@ -76,7 +97,7 @@ def main():
 			# When model has successfully run, will print prediction
 			# You can use a dictionary or similar structure to make this output
 			# more human interpretable.
-			st.success("Text Categorized as: {}".format(prediction))
+			st.success("This tweet falls under group {}".format(prediction))
 
 # Required to let Streamlit instantiate our web app.  
 if __name__ == '__main__':

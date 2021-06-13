@@ -25,80 +25,170 @@
 import streamlit as st
 import joblib,os
 
+
 # Data dependencies
 import pandas as pd
+import plotly.express as px
+#from plotly.subplots import make_subplots
+#import plotly.graph_objects as go
+from wordcloud import WordCloud, STOPWORDS
+import matplotlib.pyplot as plt
+import nltk
+import re
+
+
+
 
 # Vectorizer
-news_vectorizer = open("resources/tfidfvect.pkl","rb")
+news_vectorizer = open("resources/gst_model.pkl","rb")
 tweet_cv = joblib.load(news_vectorizer) # loading your vectorizer from the pkl file
 
 # Load your raw data
 raw = pd.read_csv("resources/train.csv")
 
-# The main function where we will build the actual app
-def main():
-	"""Tweet Classifier App with Streamlit """
+DATA_URL = (
+    "resources/train.csv"
+)
 
-	# Creates a main title and subheader on your page -
-	# these are static across all pages
-	st.title("EDSA Team TS4 Climate change Tweet Classifier")
-	st.subheader("Climate change tweet classification")
+st.title("Sentiment Analysis of Tweets about climate change")
+st.markdown("This App is a dashboard used "
+            "to analyze sentiments of tweets about climate change and to make predictions of the sentiment based on a tweet")
+st.markdown("Use the side bar to explore the data and make predictions")
+st.sidebar.title("Analysis of Tweet Sentiments")
 
-	# Creating sidebar with selection box -
-	# you can create multiple pages this way
-	options = ["Introduction", "Data Collection","Data Transformation Process", "Prediction"]
-	selection = st.sidebar.selectbox("Navigate", options)
 
-	# Building out the "Introduction" page
-	if selection == "Introduction":
-		st.info("Background")
-		# You can read a markdown file from supporting resources folder
-		st.markdown("Many companies are built around lessening one’s environmental impact or carbon footprint. "
-					"They offer products and services that are environmentally friendly and sustainable, "
-					"in line with their values and ideals. They would like to determine how people perceive climate change and whether or not they believe it is a real threat. "
-					"This would add to their market research efforts in gauging how their product/service may be received."
-					"With this context, We will present to you, a Machine Learning model "
-					"that is able to classify whether or not a person believes in climate change, based on their novel tweet data."
-					"Providing an accurate and robust solution to this task would give your company access to a broad base of consumer sentiment, "
-					"spanning multiple demographic and geographic categories - thus increasing your insights and future marketing strategies.")
+@st.cache(persist=True, allow_output_mutation=True)
+def load_data():
+    data = pd.read_csv(DATA_URL)
 
-		st.subheader("Some links on climate change")
-		st.markdown('What is climate change : link')
+    return data
 
-	# Building out the "Introduction" page
-	if selection == "Data Collection":
-		st.info("Where does our data come from?")
-		# You can read a markdown file from supporting resources folder
-		st.markdown("The collection of this data was funded by a Canada Foundation for Innovation JELF Grant to Chris Bauch, "
-						"University of Waterloo. The dataset aggregates tweets pertaining to climate change collected between "
-						"Apr 27, 2015 and Feb 21, 2018. In total, 43943 tweets were collected. Each tweet is labelled as one of the following classes:")
-		st.markdown("1: The tweet supports the belief of man-made climate change")
-		st.markdown("-1: The tweet does not believe in man-made climate change")
-		st.markdown("0: The tweet neither supports nor refutes the belief of man-made climate change")
-		st.markdown("2: The tweet links to factual news about climate change")
+data = load_data()
 
 
 
 
-	# Building out the predication page
-	if selection == "Prediction":
-		st.info("Prediction with Logistic Regression Model")
-		# Creating a text box for user input
-		tweet_text = st.text_area("Enter The tweet here","Type Here")
+#Display # of tweets by sentiment
+st.sidebar.markdown("### View the number of tweets by sentiment")
+select = st.sidebar.selectbox('Choose the Visualization type', ['Bar plot', 'Pie chart'], key='1')
+sentiment_count = data['sentiment'].value_counts()
+sentiment_count = pd.DataFrame({'Sentiment':sentiment_count.index, 'Tweets':sentiment_count.values})
+if not st.sidebar.checkbox("Hide", True):
+    st.markdown("### Number of tweets by sentiment")
+    if select == 'Bar plot':
+        fig = px.bar(sentiment_count, x='Sentiment', y='Tweets', color='Tweets', height=500)
+        st.plotly_chart(fig)
+        st.markdown("1: The tweet supports the belief of man-made climate change")
+        st.markdown("-1: The tweet does not believe in man-made climate change")
+        st.markdown("0: The tweet neither supports nor refutes the belief of man-made climate change")
+        st.markdown("2: The tweet links to factual news about climate change")
+    else:
+        fig = px.pie(sentiment_count, values='Tweets', names='Sentiment')
+        st.plotly_chart(fig)
+        st.markdown("1: The tweet supports the belief of man-made climate change")
+        st.markdown("-1: The tweet does not believe in man-made climate change")
+        st.markdown("0: The tweet neither supports nor refutes the belief of man-made climate change")
+        st.markdown("2: The tweet links to factual news about climate change")
 
-		if st.button("Classify"):
-			# Transforming user input with vectorizer
-			vect_text = tweet_cv.transform([tweet_text]).toarray()
-			# Load your .pkl file with the model of your choice + make predictions
-			# Try loading in multiple models to give the user a choice
-			predictor = joblib.load(open(os.path.join("resources/Logistic_regression.pkl"),"rb"))
-			prediction = predictor.predict(vect_text)
+#Frquent words word cloud
+st.sidebar.markdown(" ### Frequent Words used for each sentiment")
+word_sentiment = st.sidebar.radio('Which sentiment would you like to view?', ('Pro', 'Neutral', 'Anti', 'News'))
+news = data[data['sentiment'] == 2]['message']
+pro = data[data['sentiment'] == 1]['message']
+neutral =data[data['sentiment'] ==0]['message']
+anti = data[data['sentiment'] ==-1]['message']
+if not st.sidebar.checkbox("Hide", True, key=1):
+    if word_sentiment == 'Pro':
+        st.markdown("### Frequent words used in Pro climate change tweets")
+        pro = [word for line in pro for word in line.split()]
+        pro = WordCloud(
+            background_color='white',
+            max_words=50,
+            max_font_size=100,
+            scale=5,
+            random_state=1,
+            collocations=False,
+            normalize_plurals=False
+        ).generate(' '.join(pro))
+        fig, ax = plt.subplots()
+        ax.imshow(pro)
+        plt.xticks([])
+        plt.yticks([])
+        st.pyplot(fig)
+        st.markdown("We see words like believe, combat, fight, real and action which represent the pro climate change supporters who believe that climate change is real and that action needs to be taken stop it.")
 
-			# When model has successfully run, will print prediction
-			# You can use a dictionary or similar structure to make this output
-			# more human interpretable.
-			st.success("This tweet falls under group {}".format(prediction))
+    if word_sentiment == 'Anti':
+        st.markdown("### Frequent words used in Anti climate change tweets")
+        anti = [word for line in anti for word in line.split()]
+        anti = WordCloud(
+            background_color='white',
+            max_words=50,
+            max_font_size=100,
+            scale=5,
+            random_state=1,
+            collocations=False,
+            normalize_plurals=False
+        ).generate(' '.join(anti))
+        fig, ax = plt.subplots()
+        ax.imshow(anti)
+        plt.xticks([])
+        plt.yticks([])
+        st.pyplot(fig)
 
-# Required to let Streamlit instantiate our web app.  
-if __name__ == '__main__':
-	main()
+    if word_sentiment == 'Neutral':
+        st.markdown("### Frequent words used in Neutral climate change tweets")
+        neutral = [word for line in neutral for word in line.split()]
+        neutral = WordCloud(
+            background_color='white',
+            max_words=50,
+            max_font_size=100,
+            scale=5,
+            random_state=1,
+            collocations=False,
+            normalize_plurals=False
+        ).generate(' '.join(neutral))
+        fig, ax = plt.subplots()
+        ax.imshow(neutral)
+        plt.xticks([])
+        plt.yticks([])
+        st.pyplot(fig)
+
+    if word_sentiment == 'News':
+        st.markdown("### Frequent words used in News climate change tweets")
+        news = [word for line in news for word in line.split()]
+        news = WordCloud(
+            background_color='white',
+            max_words=50,
+            max_font_size=100,
+            scale=5,
+            random_state=1,
+            collocations=False,
+            normalize_plurals=False
+        ).generate(' '.join(news))
+        fig, ax = plt.subplots()
+        ax.imshow(news)
+        plt.xticks([])
+        plt.yticks([])
+        st.pyplot(fig)
+
+
+#Frequent words word cloud
+st.sidebar.markdown(" ### Make Prediction")
+if not st.sidebar.checkbox("Hide", True, key=3):
+    st.markdown("### Make a prediction of the sentiment of a tweet")
+    tweet_text = st.text_area("Enter tweet to get a prediction", "Type Here")
+    if st.button("Classify"):
+                # Transforming user input with vectorizer
+                vect_text = tweet_cv.transform([tweet_text]).toarray()
+                # Load your .pkl file with the model of your choice + make predictions
+                # Try loading in multiple models to give the user a choice
+                predictor = joblib.load(open(os.path.join("resources/gst_model.pkl"),"rb"))
+                prediction = predictor.predict(vect_text)
+
+                # When model has successfully run, will print prediction
+                # You can use a dictionary or similar structure to make this output
+                # more human interpretable.
+                st.success("Text Categorized as: {}".format(prediction))
+
+
+
